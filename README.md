@@ -3,6 +3,10 @@
 Two power actions for the **DeepSeek Harness Windows Desktop app**: **Restart**
 and **Quit**, both above Settings in the sidebar foot.
 
+| Installed in the sidebar | Close-up of the two buttons |
+| --- | --- |
+| ![Restart and Quit buttons in the sidebar foot](docs/restart-quit.png) | ![Close-up of the Restart and Quit buttons](docs/restart-quit-sidebar.png) |
+
 [中文说明](#中文说明)
 
 ## What it adds
@@ -31,7 +35,7 @@ them.
 1. Open **Plugins** in the sidebar.
 2. **Add plugin** → **Install a third-party plugin**.
 3. Enter the Git address of this repository, for example
-   `https://github.com/<your-name>/dsh-restart-button.git`, then **Install**.
+   `https://github.com/Ylnana110/dsh-restart-button.git`, then **Install**.
 
 ### From a release tarball (no Git needed)
 
@@ -93,10 +97,12 @@ Reinstall the bundle in the Plugins page after changing Host code.
 
 两个按钮仅在 Host 运行于 Windows 桌面应用时显示；`dsh web` 和其他平台不显示。侧边栏折叠时底部区域是隐藏的，需要先展开侧边栏。
 
+安装后侧边栏底部、设置上方会出现「重启」「关机」两个按钮（见上方截图）。
+
 ### 安装
 
 - **从仓库安装**（需要 Git）：侧边栏 **插件** → **添加插件** → **安装第三方插件** → 填
-  `https://github.com/<你的用户名>/dsh-restart-button.git` → 安装。
+  `https://github.com/Ylnana110/dsh-restart-button.git` → 安装。
 - **从 Release 安装包安装**（不需要 Git）：下载 Releases 里的
   `dsh-restart-button-<版本>.tgz`，在同一个对话框里填它的绝对路径。
 
