@@ -1,18 +1,20 @@
 /**
  * Host half of the restart button.
  *
- * It serves two local routes for the Web GUI and, on request, starts one small
- * Windows helper outside the application's process tree. The helper waits for
- * the browser to receive its answer, stops the application and Host process
- * trees, and then starts the application again with the command line it was
- * launched with. In a plain `dsh web` process the routes stay reachable but the
- * restart reports itself as unsupported: nothing would start the server again.
+ * It serves three local routes for the Web GUI and, on request, starts one small
+ * helper outside the application's process tree. The helper waits for the
+ * browser to receive its answer, stops the application and Host process trees,
+ * and then either starts the application again or leaves it stopped. Windows
+ * uses a PowerShell worker created through WMI; macOS uses a POSIX shell worker
+ * in its own session. In a plain `dsh web` process the routes stay reachable but
+ * the actions report themselves as unsupported: nothing would start the server
+ * again.
  */
 import { spawn } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { encodeCommand, launcherProgram, workerProgram } from './worker.js';
+import { encodeCommand, launcherProgram, posixWorkerProgram, workerProgram } from './worker.js';
 
 /** The Host this plugin runs in must own the browser HTTP carrier. */
 export const inject = ['webServer'];
@@ -31,7 +33,17 @@ const POWERSHELL = process.env.SystemRoot === undefined
 
 /** Whether this Host can restart the Desktop application. */
 function desktopHost() {
-  return process.platform === 'win32' && typeof process.send === 'function';
+  return (process.platform === 'win32' || process.platform === 'darwin') && typeof process.send === 'function';
+}
+
+/**
+ * Read the `.app` bundle containing one macOS executable.
+ * @param executable - absolute path of the running executable.
+ * @returns the bundle path, or an empty string outside a bundle.
+ */
+function appBundleOf(executable) {
+  const match = /^(.+?\.app)\/Contents\/MacOS\//.exec(executable);
+  return match === null ? '' : match[1];
 }
 
 /**
@@ -116,20 +128,11 @@ async function startPower(ctx, options) {
     hostPid: process.pid,
     executable: process.execPath,
     appDir: dirname(process.execPath),
+    appBundle: appBundleOf(process.execPath),
     port: listenerPort(ctx),
     relaunch: options.relaunch !== false,
   };
   writeFileSync(files.log, '', 'utf8');
-  const launcher = launcherProgram(workerProgram(files, facts));
-  // A detached Windows spawn starts the process with DETACHED_PROCESS, which
-  // makes PowerShell 5.1 exit immediately without running the script. The
-  // launcher only needs about a second, and the worker it creates through WMI
-  // is the process that must survive, so this child stays attached.
-  const child = spawn(
-    POWERSHELL,
-    ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encodeCommand(launcher)],
-    { stdio: 'ignore', windowsHide: true },
-  );
   const note = (text) => {
     try {
       appendFileSync(files.log, `${text}\n`, 'utf8');
@@ -137,9 +140,31 @@ async function startPower(ctx, options) {
       // The response still reports the failure without the note.
     }
   };
-  child.on('error', (error) => note(`launcher spawn failed: ${error instanceof Error ? error.message : String(error)}`));
-  child.on('exit', (code, signal) => note(`launcher exited code=${String(code)} signal=${String(signal)}`));
-  child.unref();
+  if (process.platform === 'darwin') {
+    // Without a way to start the app again, a restart would leave it closed.
+    if (facts.relaunch && facts.appBundle === '' && !existsSync(facts.executable)) {
+      return { status: 409, body: { ok: false, reason: 'unsupported' } };
+    }
+    const script = join(dir, 'worker.sh');
+    writeFileSync(script, posixWorkerProgram(files, facts), { mode: 0o700 });
+    const child = spawn('/bin/sh', [script], { detached: true, stdio: 'ignore' });
+    child.on('error', (error) => note(`worker spawn failed: ${error instanceof Error ? error.message : String(error)}`));
+    child.unref();
+  } else {
+    // A detached Windows spawn starts the process with DETACHED_PROCESS, which
+    // makes PowerShell 5.1 exit immediately without running the script. The
+    // launcher only needs about a second, and the worker it creates through WMI
+    // is the process that must survive, so this child stays attached.
+    const launcher = launcherProgram(workerProgram(files, facts));
+    const child = spawn(
+      POWERSHELL,
+      ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encodeCommand(launcher)],
+      { stdio: 'ignore', windowsHide: true },
+    );
+    child.on('error', (error) => note(`launcher spawn failed: ${error instanceof Error ? error.message : String(error)}`));
+    child.on('exit', (code, signal) => note(`launcher exited code=${String(code)} signal=${String(signal)}`));
+    child.unref();
+  }
   const ready = await waitForFile(files.marker, LAUNCH_TIMEOUT_MS);
   if (!ready) return { status: 503, body: { ok: false, reason: 'launcher', log: files.log } };
   setTimeout(() => {

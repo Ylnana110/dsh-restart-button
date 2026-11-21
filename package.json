@@ -1,6 +1,6 @@
 {
   "name": "dsh-restart-button",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Restart or fully quit DeepSeek Harness Desktop from sidebar buttons.",
   "license": "MIT",
   "type": "module",
@@ -30,7 +30,8 @@
     "bundle": {
       "patch": "./cordis.patch.yml",
       "platforms": [
-        "win32"
+        "win32",
+        "darwin"
       ]
     },
     "client": {

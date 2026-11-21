@@ -21,7 +21,21 @@ jobs:
           node-version: 22
       - name: Pack the bundle
         run: pnpm pack
+      - name: Add a version-independent copy
+        run: cp dsh-restart-button-*.tgz dsh-restart-button.tgz
       - name: Attach the tarball to the release
         uses: softprops/action-gh-release@v2
         with:
-          files: '*.tgz'
+          files: |
+            dsh-restart-button-*.tgz
+            dsh-restart-button.tgz
+          body: |
+            Restart and quit buttons for DeepSeek Harness Desktop.
+
+            - Windows: tested.
+            - macOS: implemented, not yet tested on a real Mac.
+            - Install from the `.tgz` below, or from the Git URL of this repository.
+            - Stable download link for the latest release:
+              https://github.com/Ylnana110/dsh-restart-button/releases/latest/download/dsh-restart-button.tgz
+
+            给 DeepSeek Harness 桌面版加「重启 / 关机」两个按钮。Windows 已验证；macOS 路径已实现但尚未在真机实测。

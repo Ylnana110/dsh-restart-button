@@ -111,6 +111,114 @@ if (-not $started) { Write-Log 'the application did not start' }
 }
 
 /**
+ * Quote one value for a POSIX shell word.
+ * @param value - text to embed.
+ * @returns the single-quoted word.
+ */
+export function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * Build the detached worker for macOS.
+ *
+ * It runs in its own session, so killing the application's process tree does
+ * not reach it. The tree walk skips the worker's own PID because the worker is
+ * still a child of the Host until that process dies.
+ * @param files - marker, go, and log paths.
+ * @param facts - process identities and launch facts.
+ * @returns the shell program source.
+ */
+export function posixWorkerProgram(files, facts) {
+  const mainPid = String(facts.mainPid);
+  const hostPid = String(facts.hostPid);
+  const port = String(facts.port);
+  const relaunch = facts.relaunch === false ? '0' : '1';
+  return `#!/bin/sh
+LOG=${shellQuote(files.log)}
+MAIN_PID=${mainPid}
+HOST_PID=${hostPid}
+EXE=${shellQuote(facts.executable)}
+APP_BUNDLE=${shellQuote(facts.appBundle ?? '')}
+PORT=${port}
+RELAUNCH=${relaunch}
+MARKER=${shellQuote(files.marker)}
+GO=${shellQuote(files.go)}
+log() { printf '[%s] %s\\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" >> "$LOG" 2>/dev/null; }
+log "worker started pid=$$ relaunch=$RELAUNCH"
+: > "$MARKER" 2>/dev/null
+if [ "$RELAUNCH" = "1" ]; then
+  if [ -n "$APP_BUNDLE" ] && [ -d "$APP_BUNDLE" ]; then
+    :
+  elif [ -x "$EXE" ]; then
+    :
+  else
+    log 'relaunch target missing; leaving the application alone'
+    exit 3
+  fi
+fi
+i=0
+while [ ! -e "$GO" ]; do
+  i=$((i + 1))
+  if [ "$i" -gt 120 ]; then
+    log 'no confirmation; leaving the application alone'
+    exit 2
+  fi
+  sleep 0.1
+done
+log 'confirmed by the Host'
+sleep 0.7
+kill_tree() {
+  for child in $(ps -axo pid=,ppid= | awk -v parent="$1" '$2 == parent { print $1 }'); do
+    if [ "$child" != "$$" ]; then
+      kill_tree "$child"
+    fi
+  done
+  kill -9 "$1" 2>/dev/null
+}
+kill -TERM "$MAIN_PID" 2>/dev/null
+sleep 0.5
+kill_tree "$MAIN_PID"
+log 'stopped the application process tree'
+kill_tree "$HOST_PID"
+log 'stopped the Host process tree'
+if [ "$RELAUNCH" = "0" ]; then
+  sleep 1.2
+  log 'application stopped'
+  exit 0
+fi
+if [ "$PORT" != "0" ]; then
+  i=0
+  while [ "$i" -lt 80 ]; do
+    if ! lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.25
+    i=$((i + 1))
+  done
+  log 'listening port released or wait expired'
+fi
+started=0
+for attempt in 1 2 3 4; do
+  if [ -n "$APP_BUNDLE" ] && [ -d "$APP_BUNDLE" ]; then
+    open -n "$APP_BUNDLE" >/dev/null 2>&1
+  else
+    nohup "$EXE" >/dev/null 2>&1 &
+  fi
+  sleep 2
+  if pgrep -f "$EXE" >/dev/null 2>&1; then
+    started=1
+    log "application started on attempt $attempt"
+    break
+  fi
+done
+if [ "$started" = "0" ]; then
+  log 'the application did not start'
+fi
+`;
+}
+
+/**
  * Build the short-lived launcher program.
  *
  * The worker is created with `Win32_ProcessStartup.ShowWindow = 0`: a console
