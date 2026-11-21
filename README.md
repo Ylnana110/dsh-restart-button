@@ -3,9 +3,25 @@
 Two power actions for the **DeepSeek Harness Windows Desktop app**: **Restart**
 and **Quit**, both above Settings in the sidebar foot.
 
+> This is the **`Ylnana110/dsh-restart-button`** repository. Other repositories
+> with the same name are unrelated; install from the full URL below.
+
 | Installed in the sidebar | Close-up of the two buttons |
 | --- | --- |
 | ![Restart and Quit buttons in the sidebar foot](docs/restart-quit.png) | ![Close-up of the Restart and Quit buttons](docs/restart-quit-sidebar.png) |
+
+## Quick install
+
+1. In DeepSeek Harness open **Plugins** → **Add plugin** → **Install a third-party plugin**.
+2. Paste this address and press **Install**:
+
+   ```
+   https://github.com/Ylnana110/dsh-restart-button.git
+   ```
+
+   No Git installed? Download
+   [dsh-restart-button-1.0.0.tgz](https://github.com/Ylnana110/dsh-restart-button/releases/download/v1.0.0/dsh-restart-button-1.0.0.tgz)
+   and paste its absolute path in the same dialog instead.
 
 [中文说明](#中文说明)
 
@@ -91,6 +107,21 @@ Reinstall the bundle in the Plugins page after changing Host code.
 ## 中文说明
 
 给 **DeepSeek Harness Windows 桌面版**增加两个按钮，位于侧边栏底部、设置上方：
+
+> 认准仓库 **`Ylnana110/dsh-restart-button`**；GitHub 上同名的其他仓库与本插件无关。
+
+### 快速安装
+
+1. 侧边栏 **插件** → **添加插件** → **安装第三方插件**。
+2. 粘贴下面这个地址，点 **安装**：
+
+   ```
+   https://github.com/Ylnana110/dsh-restart-button.git
+   ```
+
+   没装 Git？下载
+   [dsh-restart-button-1.0.0.tgz](https://github.com/Ylnana110/dsh-restart-button/releases/download/v1.0.0/dsh-restart-button-1.0.0.tgz)，
+   在同一个对话框里填它的绝对路径即可。
 
 - **重启**：第一次点击进入确认状态，再点一次才重启桌面应用及其 Host——插件安装/卸载后靠它生效。
 - **关机**：按一下就直接关闭，连同 Host、后台 sidecar、MCP 服务与终端进程一起结束。
