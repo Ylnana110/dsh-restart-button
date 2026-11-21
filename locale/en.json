@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Restart and quit",
+    "description": "Adds two actions above Settings in the sidebar foot. Restart asks for a confirming press, then restarts the Windows Desktop application and its Host so installed or removed plugins take effect. Quit closes the application completely, including its Host, sidecars, MCP servers, and terminal processes, with a single press. Both interrupt running tasks, and scheduled tasks do not run while the app is closed. The actions appear only when the Host runs inside the Windows Desktop application; plain dsh web and other platforms hide them. The sidebar foot is hidden while the sidebar is collapsed, so expand the sidebar to reach the actions."
+  }
+}

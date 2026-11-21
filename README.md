@@ -1,0 +1,107 @@
+# dsh-restart-button
+
+Two power actions for the **DeepSeek Harness Windows Desktop app**: **Restart**
+and **Quit**, both above Settings in the sidebar foot.
+
+[中文说明](#中文说明)
+
+## What it adds
+
+- **Restart** — first press arms the button, a later press restarts the Desktop
+  app and its Host process. This is what makes a freshly installed or removed
+  plugin take effect.
+- **Quit** — a single press closes the application completely, including its
+  Host, sidecars, MCP servers and terminal processes.
+
+Both actions appear only when the Host runs inside the Windows Desktop
+application; in `dsh web` and on other platforms they stay hidden. The sidebar
+foot is hidden while the sidebar is collapsed, so expand the sidebar to reach
+them.
+
+## Requirements
+
+- DeepSeek Harness Desktop on **Windows** (tested on `0.2.2-rc.5`).
+- The bundle declares `dsh.bundle.platforms: ["win32"]`, so other platforms show
+  it as unsupported instead of installing a dead button.
+
+## Install
+
+### From this repository (needs Git)
+
+1. Open **Plugins** in the sidebar.
+2. **Add plugin** → **Install a third-party plugin**.
+3. Enter the Git address of this repository, for example
+   `https://github.com/<your-name>/dsh-restart-button.git`, then **Install**.
+
+### From a release tarball (no Git needed)
+
+1. Download `dsh-restart-button-<version>.tgz` from the **Releases** page.
+2. Save it anywhere, then enter its absolute path in the same dialog.
+
+### From a local checkout
+
+Point the same dialog at the absolute path of this directory.
+
+## How it works
+
+The Host half serves three local routes on the Host's own HTTP carrier:
+`GET /dsh-restart/status`, `POST /dsh-restart/restart` and
+`POST /dsh-restart/quit`. A power request must come from the application page
+(same-origin or the Desktop protocol) and carry the plugin's request header, so
+cross-site POSTs are rejected.
+
+Each request starts a short-lived PowerShell launcher that creates a worker
+through WMI with `Win32_ProcessStartup.ShowWindow = 0`. The worker therefore
+lives outside the application's process tree, survives the shutdown it performs,
+and never shows a console window. It stops the application and Host process
+trees and then either starts the application again (restart) or exits (quit).
+Logs land in `%TEMP%\dsh-restart-<pid>-<stamp>\restart.log`.
+
+The plugin registers no network clients and sends no data anywhere; it only
+talks to the loopback Host it runs in.
+
+## Safety notes
+
+- Restart and quit interrupt running tasks, and scheduled tasks do not run while
+  the app is closed.
+- Quit is a hard process-tree stop, like ending the app from Task Manager: the
+  graceful quit dialog is bypassed.
+- Restart reuses the command line the application was started with and waits for
+  the Host's listening port to be released before starting it again.
+
+## Development
+
+```powershell
+# package exactly the files listed in package.json "files"
+pnpm pack
+```
+
+Reinstall the bundle in the Plugins page after changing Host code.
+
+## License
+
+[MIT](LICENSE)
+
+---
+
+## 中文说明
+
+给 **DeepSeek Harness Windows 桌面版**增加两个按钮，位于侧边栏底部、设置上方：
+
+- **重启**：第一次点击进入确认状态，再点一次才重启桌面应用及其 Host——插件安装/卸载后靠它生效。
+- **关机**：按一下就直接关闭，连同 Host、后台 sidecar、MCP 服务与终端进程一起结束。
+
+两个按钮仅在 Host 运行于 Windows 桌面应用时显示；`dsh web` 和其他平台不显示。侧边栏折叠时底部区域是隐藏的，需要先展开侧边栏。
+
+### 安装
+
+- **从仓库安装**（需要 Git）：侧边栏 **插件** → **添加插件** → **安装第三方插件** → 填
+  `https://github.com/<你的用户名>/dsh-restart-button.git` → 安装。
+- **从 Release 安装包安装**（不需要 Git）：下载 Releases 里的
+  `dsh-restart-button-<版本>.tgz`，在同一个对话框里填它的绝对路径。
+
+### 注意
+
+- 重启与关机都会中断正在运行的任务；应用关闭期间定时任务不会执行。
+- 关机会强制结束整棵进程树（比菜单退出更彻底），不弹确认框。
+- 插件只访问本机回环地址上的 Host，不联网、不上传数据。

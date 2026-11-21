@@ -1,0 +1,43 @@
+{
+  "name": "dsh-restart-button",
+  "version": "1.0.0",
+  "description": "Restart or fully quit DeepSeek Harness Desktop from sidebar buttons.",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "restart"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "worker.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml",
+      "platforms": [
+        "win32"
+      ]
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  }
+}
